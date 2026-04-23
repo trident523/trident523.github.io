@@ -1,0 +1,10 @@
+node_modules
+dist
+.astro
+.env
+.env.local
+.DS_Store
+worker/node_modules
+worker/.wrangler
+worker/.dev.vars
+*.log

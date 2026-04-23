@@ -1,0 +1,27 @@
+name = "miniature-enigma"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+
+# Public (non-secret) variables. Secrets are set with `wrangler secret put <NAME>`.
+[vars]
+GITHUB_REPO = "trident523/miniature-enigma"
+GITHUB_BRANCH = "main"
+# Set these to the E.164 numbers you buy from Twilio, e.g. "+15551234567".
+ADMIN_NUMBER = ""
+PUBLIC_NUMBER = ""
+# CORS origin for the public site. Trailing slash optional.
+ALLOWED_ORIGIN = "https://trident523.github.io"
+
+# KV namespace for PIN rate-limit counters. Create with:
+#   wrangler kv namespace create RATE_LIMIT
+# then paste the id below.
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "REPLACE_WITH_KV_ID"
+
+# Secrets (set via `wrangler secret put <NAME>`):
+#   GITHUB_TOKEN          fine-grained PAT with Contents: Read & Write on the repo
+#   PIN_HASH              SHA-256 hex of your admin PIN (see README)
+#   TURNSTILE_SECRET      Cloudflare Turnstile secret key
+#   TWILIO_ACCOUNT_SID    Twilio account SID (used to fetch recordings/MMS)
+#   TWILIO_AUTH_TOKEN     Twilio auth token (used as Basic Auth password)

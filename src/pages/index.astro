@@ -1,0 +1,120 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../layouts/Layout.astro";
+import Entry from "../components/Entry.astro";
+
+const posts = await getCollection("posts");
+const messages = await getCollection("messages");
+
+type FeedItem = {
+  id: string;
+  kind: "post" | "message";
+  data: Record<string, any>;
+};
+const feed: FeedItem[] = [
+  ...posts.map((p) => ({ id: p.id, kind: "post" as const, data: p.data })),
+  ...messages.map((m) => ({ id: m.id, kind: "message" as const, data: m.data })),
+].sort((a, b) => +new Date(b.data.date) - +new Date(a.data.date));
+
+const workerUrl = import.meta.env.PUBLIC_WORKER_URL ?? "";
+const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
+---
+<Layout title="Status">
+  <p class="meta">
+    Updates appear below in reverse-chronological order. Notes from visitors show up here too.
+  </p>
+
+  <section>
+    {feed.length === 0 ? <p class="meta">No updates yet.</p> : null}
+    {feed.map((item) => (
+      <Entry
+        kind={item.kind}
+        date={new Date(item.data.date)}
+        body={item.data.body}
+        author={item.data.author}
+        from={item.data.from}
+        source={item.data.source}
+        audio={item.data.audio}
+        image={item.data.image}
+      />
+    ))}
+  </section>
+
+  <h2 id="messages" class="section-title">Leave a note</h2>
+  <p class="meta">
+    A short message of support is plenty. Notes may appear publicly on this page.
+    No email or account required.
+  </p>
+
+  <form id="msg-form" class="card">
+    <div class="field">
+      <label for="msg-name">Your name (optional)</label>
+      <input id="msg-name" name="name" autocomplete="name" maxlength="60" />
+    </div>
+    <div class="field">
+      <label for="msg-body">Note</label>
+      <textarea id="msg-body" name="body" required maxlength="2000"></textarea>
+    </div>
+    {turnstileKey ? (
+      <div class="field" id="ts-mount">
+        <div class="cf-turnstile" data-sitekey={turnstileKey} data-theme="dark"></div>
+      </div>
+    ) : null}
+    <button type="submit">Send</button>
+    <div class="status" id="msg-status" aria-live="polite"></div>
+  </form>
+
+  <script is:inline define:vars={{ workerUrl, turnstileKey }}>
+    (function () {
+      if (turnstileKey) {
+        const s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        s.async = true;
+        s.defer = true;
+        document.head.appendChild(s);
+      }
+      const form = document.getElementById("msg-form");
+      const status = document.getElementById("msg-status");
+      if (!form) return;
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        status.className = "status";
+        status.textContent = "Sending…";
+        if (!workerUrl) {
+          status.className = "status err";
+          status.textContent = "Submissions aren't configured yet.";
+          return;
+        }
+        const fd = new FormData(form);
+        const body = {
+          name: (fd.get("name") || "").toString().trim(),
+          body: (fd.get("body") || "").toString().trim(),
+          turnstile: (fd.get("cf-turnstile-response") || "").toString(),
+        };
+        if (!body.body) {
+          status.className = "status err";
+          status.textContent = "Please write something first.";
+          return;
+        }
+        try {
+          const res = await fetch(workerUrl.replace(/\/$/, "") + "/messages", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || res.statusText);
+          }
+          status.className = "status ok";
+          status.textContent = "Thanks. Your note was received and will appear shortly.";
+          form.reset();
+          if (window.turnstile) window.turnstile.reset();
+        } catch (err) {
+          status.className = "status err";
+          status.textContent = "Sorry, something went wrong. Please try again later.";
+        }
+      });
+    })();
+  </script>
+</Layout>

@@ -1,0 +1,25 @@
+title: Status
+description: Updates on a medical journey.
+baseurl: ""
+url: "https://trident523.github.io"
+
+permalink: /:year/:month/:day/:slug/
+timezone: America/Los_Angeles
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: default
+
+# This site is configured to serve from the root of the
+# `trident523/trident523.github.io` repo (URL: https://trident523.github.io/).
+# If you ever move it back to a project repo, set `baseurl` to that repo's
+# path (e.g. "/miniature-enigma").
